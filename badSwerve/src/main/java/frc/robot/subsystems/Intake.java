@@ -1,16 +1,16 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Intake extends SubsystemBase {
-  private CANSparkMax m_motor;
+  private SparkMax m_motor;
 
   public Intake() {
-    m_motor = new CANSparkMax(Constants.CAN_ID.INTAKE, MotorType.kBrushless);
+    m_motor = new SparkMax(Constants.CAN_ID.INTAKE, MotorType.kBrushless);
   }
 
   public void set(double percent) {

@@ -1,11 +1,17 @@
 package frc.robot.commands;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.CompSwerveTunerConstants;
+import frc.robot.TunerConstants;
 import frc.robot.Constants;
 import frc.robot.Robot;
 
 public class DefaultDrive extends Command {
+  
+  private static final double m_speedAt12VoltsMPS =
+    TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+    
   public DefaultDrive() {
     addRequirements(Robot.swerve);
   }
@@ -20,8 +26,8 @@ public class DefaultDrive extends Command {
       Robot.swerve.stopMotors();
     } else {
       Robot.swerve.driveFieldRelative(
-          y * CompSwerveTunerConstants.kSpeedAt12VoltsMps,
-          x * CompSwerveTunerConstants.kSpeedAt12VoltsMps,
+          y * m_speedAt12VoltsMPS,
+          x * m_speedAt12VoltsMPS,
           rotation * Constants.SWERVE.MAX_ANGULAR_RATE_ROTATIONS_PER_SECOND);
     }
   }

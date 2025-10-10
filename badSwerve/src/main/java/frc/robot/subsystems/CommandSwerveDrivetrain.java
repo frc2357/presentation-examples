@@ -1,194 +1,202 @@
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.StatusCode;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
+import com.ctre.phoenix6.swerve.SwerveModule;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveModuleConstants;
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
+import choreo.trajectory.SwerveSample;
+import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
-import frc.robot.Constants;
-import java.util.function.Consumer;
+import frc.robot.Constants.CHOREO;
+import frc.robot.TunerConstants.TunerSwerveDrivetrain;
+
 import java.util.function.Supplier;
 
 /**
- * Class that extends the Phoenix SwerveDrivetrain class and implements subsystem so it can be used
- * in command-based projects easily.
+ * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
+ * Subsystem so it can easily be used in command-based projects.
  */
-public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsystem {
+public class CommandSwerveDrivetrain
+    extends TunerSwerveDrivetrain
+    implements Subsystem {
 
-  private final SwerveRequest.ApplyChassisSpeeds chassisSpeedRequest =
-      new SwerveRequest.ApplyChassisSpeeds();
+  private final SwerveRequest.FieldCentric m_fieldRelative = new SwerveRequest.FieldCentric()
+      .withDriveRequestType(DriveRequestType.Velocity); // Use open-loop control for drive motors;
 
-  private final SwerveRequest.FieldCentric fieldRelative =
-      new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.Velocity);
+  private final SwerveRequest.ApplyFieldSpeeds m_fieldSpeedsRequest = new SwerveRequest.ApplyFieldSpeeds()
+      .withDriveRequestType(DriveRequestType.Velocity); // Use open-loop control for drive motors;
 
-  private final SwerveRequest.RobotCentric robotRelative =
-      new SwerveRequest.RobotCentric().withDriveRequestType(DriveRequestType.Velocity);
-
-  public CommandSwerveDrivetrain(
-      SwerveDrivetrainConstants driveTrainConstants,
-      double OdometryUpdateFrequency,
-      SwerveModuleConstants... modules) {
-    super(driveTrainConstants, OdometryUpdateFrequency, modules);
-  }
-
-  public CommandSwerveDrivetrain(
-      SwerveDrivetrainConstants driveTrainConstants, SwerveModuleConstants... modules) {
-    this(driveTrainConstants, 0, modules);
-  }
-
-  public void applyRequest(Supplier<SwerveRequest> requestSupplier) {
-    setControl(requestSupplier.get());
-  }
-  
   /**
-   * The method to use for robot relative driving.
+   * Constructs a CTRE SwerveDrivetrain using the specified constants.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct
+   * the devices themselves. If they need the devices, they can access them
+   * through
+   * getters in the classes.
    *
-   * @param velocityXSpeedMetersPerSecond The desired speed on the X axis in meters per second.
-   * @param velocityYSpeedMetersPerSecond The desired speed on the X axis in meters per second.
-   * @param rotationRateRadiansPerSecond The desired rotation rate in radians per second.
+   * @param drivetrainConstants Drivetrain-wide constants for the swerve drive
+   * @param modules             Constants for each specific module
    */
-  public void driveRobotRelative(
-      double velocityXMetersPerSecond,
-      double velocityYMetersPerSecond,
-      double rotationRateRadiansPerSecond) {
-    applyRequest(
-        () ->
-            robotRelative
-                .withVelocityX(velocityXMetersPerSecond)
-                .withVelocityY(velocityYMetersPerSecond)
-                .withRotationalRate(rotationRateRadiansPerSecond));
+  public CommandSwerveDrivetrain(
+      SwerveDrivetrainConstants drivetrainConstants,
+      SwerveModuleConstants<?, ?, ?>... modules) {
+    super(drivetrainConstants, modules);
+  }
+
+  /**
+   * Constructs a CTRE SwerveDrivetrain using the specified constants.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct
+   * the devices themselves. If they need the devices, they can access them
+   * through
+   * getters in the classes.
+   *
+   * @param drivetrainConstants     Drivetrain-wide constants for the swerve drive
+   * @param odometryUpdateFrequency The frequency to run the odometry loop. If
+   *                                unspecified or set to 0 Hz, this is 250 Hz on
+   *                                CAN FD, and 100 Hz on CAN 2.0.
+   * @param modules                 Constants for each specific module
+   */
+  public CommandSwerveDrivetrain(
+      SwerveDrivetrainConstants drivetrainConstants,
+      double odometryUpdateFrequency,
+      SwerveModuleConstants<?, ?, ?>... modules) {
+    super(drivetrainConstants, odometryUpdateFrequency, modules);
+  }
+
+  /**
+   * Constructs a CTRE SwerveDrivetrain using the specified constants.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct
+   * the devices themselves. If they need the devices, they can access them
+   * through
+   * getters in the classes.
+   *
+   * @param drivetrainConstants       Drivetrain-wide constants for the swerve
+   *                                  drive
+   * @param odometryUpdateFrequency   The frequency to run the odometry loop. If
+   *                                  unspecified or set to 0 Hz, this is 250 Hz
+   *                                  on
+   *                                  CAN FD, and 100 Hz on CAN 2.0.
+   * @param odometryStandardDeviation The standard deviation for odometry
+   *                                  calculation
+   *                                  in the form [x, y, theta]ᵀ, with units in
+   *                                  meters
+   *                                  and radians
+   * @param visionStandardDeviation   The standard deviation for vision
+   *                                  calculation
+   *                                  in the form [x, y, theta]ᵀ, with units in
+   *                                  meters
+   *                                  and radians
+   * @param modules                   Constants for each specific module
+   */
+  public CommandSwerveDrivetrain(
+      SwerveDrivetrainConstants drivetrainConstants,
+      double odometryUpdateFrequency,
+      Matrix<N3, N1> odometryStandardDeviation,
+      Matrix<N3, N1> visionStandardDeviation,
+      SwerveModuleConstants<?, ?, ?>... modules) {
+    super(
+        drivetrainConstants,
+        odometryUpdateFrequency,
+        odometryStandardDeviation,
+        visionStandardDeviation,
+        modules);
+  }
+
+  /**
+   * Returns a command that applies the specified control request to this swerve
+   * drivetrain.
+   *
+   * @param request Function returning the request to apply
+   * @return Command to run
+   */
+  public Command applyRequest(Supplier<SwerveRequest> requestSupplier) {
+    return run(() -> this.setControl(requestSupplier.get()));
   }
 
   /**
    * The method to use for field relative driving.
    *
-   * @param velocityXSpeedMetersPerSecond The desired speed on the X axis in meters per second.
-   * @param velocityYSpeedMetersPerSecond The desired speed on the X axis in meters per second.
-   * @param rotationRateRadiansPerSecond The desired rotation rate in radians per second.
+   * @param velocityXMetersPerSecond     The desired speed on the X axis in meters
+   *                                     per second.
+   * @param velocityYMetersPerSecond     The desired speed on the Y axis in meters
+   *                                     per second.
+   * @param rotationRateRadiansPerSecond The desired rotation rate in radians per
+   *                                     second.
    */
   public void driveFieldRelative(
       double velocityXMetersPerSecond,
       double velocityYMetersPerSecond,
       double rotationRateRadiansPerSecond) {
-    applyRequest(
-        () ->
-            fieldRelative
-                .withVelocityX(velocityXMetersPerSecond)
-                .withVelocityY(velocityYMetersPerSecond)
-                .withRotationalRate(rotationRateRadiansPerSecond));
+    setControl(
+        m_fieldRelative
+            .withVelocityX(velocityXMetersPerSecond)
+            .withVelocityY(velocityYMetersPerSecond)
+            .withRotationalRate(rotationRateRadiansPerSecond));
   }
 
-  /**
-   * @return A list of module positions in the order Front Left, Front Right, Back Left, Back Right
-   */
-  public SwerveModulePosition[] getModulePositions() {
-    return super.m_modulePositions;
-  }
-
-  /**
-   * @return A list of module states in the order Front Left, Front Right, Back Left, Back Right
-   */
-  public SwerveModuleState[] getModuleStates() {
-    return super.getState().ModuleStates;
-  }
-
-  /**
-   * @return A list of module targets in the order Front Left, Front Right, Back Left, Back Right
-   */
-  public SwerveModuleState[] getModuleTargets() {
-    return super.getState().ModuleTargets;
-  }
-
-  public Pose2d getPose() {
-    return super.getState().Pose;
-  }
-
-  private SwerveDriveKinematics getKinematics() {
-    return super.m_kinematics;
-  }
-
-  public void zeroGyro(boolean flip) {
-    StatusCode code = super.getPigeon2().setYaw(flip ? 180 : 0);
-    System.out.println("[GYRO] Zeroed to " + (flip ? 180 : 0) + ": " + code.toString());
-  }
-
-  public void resetPose() {
-    setPose(new Pose2d(0, 0, new Rotation2d()));
-  }
-
-  public void stopMotorsIntoX() {
-    applyRequest(() -> new SwerveRequest.SwerveDriveBrake());
-  }
-
-  /** Stops the motors in a way that should make them not jingle. */
   public void stopMotors() {
     driveFieldRelative(0, 0, 0);
-    for (SwerveModule module : super.Modules) {
+    for (SwerveModule<TalonFX, TalonFX, CANcoder> module : super.getModules()) {
       module.getDriveMotor().stopMotor(); // anti-jingle
       module.getSteerMotor().stopMotor(); // remove to bring back the jingle (dont do it)
     }
   }
 
-  public void setPose(Pose2d poseToSet) {
-    super.seedFieldRelative(poseToSet);
-  }
-
   public void setPoseAndGyro(Pose2d poseToSet) {
-    super.seedFieldRelative(poseToSet);
-    super.m_pigeon2.setYaw(poseToSet.getRotation().getDegrees());
-  }
-
-  public void setPose3D(Pose3d poseToSet) {
-    super.seedFieldRelative(poseToSet.toPose2d());
-    super.getPigeon2().setYaw(Units.radiansToDegrees(poseToSet.getRotation().getAngle()));
+    super.resetPose(poseToSet);
+    super.getPigeon2().setYaw(poseToSet.getRotation().getDegrees());
   }
 
   /**
-   * @return A ChassisSpeeds Consumer which applies a feedforward to its inputs.
+   * Sets the pose straight as you input it, with no flipping to compensate for
+   * alliance.
+   * 
+   * @param poseToSet The pose it will set.
    */
-  public Consumer<ChassisSpeeds> getChassisSpeedsConsumer() {
-    return new Consumer<ChassisSpeeds>() {
-      @Override
-      public void accept(ChassisSpeeds speeds) {
-        SwerveModuleState[] moduleStates = getKinematics().toSwerveModuleStates(speeds);
-        for (SwerveModuleState state : moduleStates) {
-          state.speedMetersPerSecond += Constants.SWERVE.STATIC_FEEDFORWARD_METERS_PER_SECOND;
-        }
-        setControl(chassisSpeedRequest.withSpeeds(getKinematics().toChassisSpeeds(moduleStates)));
-      }
-    };
+  public void setFieldRelativePose2d(Pose2d poseToSet) {
+    super.resetPose(poseToSet);
   }
 
   /**
-   * Returns the current field relative speeds but in a ChassisSpeeds object.
-   *
-   * @return the current field relative speeds in a ChassisSpeeds object.
+   * Gets the pose, with no flipping to compensate for alliance.
+   * 
+   * @return The field relative pose.
    */
-  public ChassisSpeeds getFieldRelativeChassisSpeeds() {
-    ChassisSpeeds chassisSpeeds = getKinematics().toChassisSpeeds(getModuleStates());
-    return chassisSpeeds;
+  public Pose2d getFieldRelativePose2d() {
+    return super.getState().Pose;
   }
 
-  /**
-   * Returns the current robot relative speeds but in a ChassisSpeeds object.
-   *
-   * @return the current robot relative speeds in a ChassisSpeeds object.
-   */
-  public ChassisSpeeds getRobotRelativChassisSpeeds() {
-    var chassisSpeeds =
-        ChassisSpeeds.fromFieldRelativeSpeeds(
-            getFieldRelativeChassisSpeeds(), getRotation3d().toRotation2d());
-    return chassisSpeeds;
+  public void followChoreoPath(SwerveSample sample) {
+    Pose2d pose = getFieldRelativePose2d();
+    CHOREO.ROTATION_CONTROLLER.enableContinuousInput(-Math.PI, Math.PI);
+
+    var targetSpeeds = sample.getChassisSpeeds();
+    targetSpeeds.vxMetersPerSecond += CHOREO.X_CONTROLLER.calculate(
+        pose.getX(),
+        sample.x);
+    targetSpeeds.vyMetersPerSecond += CHOREO.Y_CONTROLLER.calculate(
+        pose.getY(),
+        sample.y);
+    targetSpeeds.omegaRadiansPerSecond += CHOREO.ROTATION_CONTROLLER.calculate(
+        pose.getRotation().getRadians(),
+        sample.heading);
+    setControl(
+        m_fieldSpeedsRequest
+            .withSpeeds(targetSpeeds)
+            .withWheelForceFeedforwardsX(sample.moduleForcesX())
+            .withWheelForceFeedforwardsY(sample.moduleForcesY()));
   }
 }

@@ -6,11 +6,11 @@ import choreo.auto.AutoTrajectory;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Robot;
 
-public class AutoBadZero {
+public class AutoBadPose {
 
   public static final AutoFactory AUTO_FACTORY = new AutoFactory(
       Robot.swerve::getFieldRelativePose2d,
-      Robot.swerve::setPoseAndGyro,
+      Robot.swerve::setFieldRelativePose2d,
       Robot.swerve::followChoreoPath,
       true,
       Robot.swerve);
@@ -18,9 +18,9 @@ public class AutoBadZero {
   protected AutoRoutine m_routine;
   protected AutoTrajectory m_startTraj;
 
-  public AutoBadZero() {
+  public AutoBadPose() {
 
-    m_routine = AUTO_FACTORY.newRoutine("Auto Bad Zero");
+    m_routine = AUTO_FACTORY.newRoutine("Auto Bad Pose");
 
     AutoTrajectory startTraj = m_routine.trajectory("path1");
     AutoTrajectory secondTraj = m_routine.trajectory("path2");
@@ -29,7 +29,6 @@ public class AutoBadZero {
         .active()
         .onTrue(
             Commands.sequence(
-                startTraj.resetOdometry(),
                 startTraj.cmd(), secondTraj.cmd()));
   }
 
